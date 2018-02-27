@@ -19,6 +19,7 @@ import (
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
+	"log"
 )
 
 // slash returns the dashboard, if logged in, else it redirects to login page.
@@ -303,3 +304,65 @@ func slashPie(c *gin.Context) {
 		"Vals":  template.JS(valsJSON),
 	})
 }
+
+func getUserAutomations(c *gin.Context) {
+	automationsMutex.RLock()
+	user := c.DefaultQuery("user", "")
+	if user == "" {
+		c.JSON(http.StatusOK, automations)
+		return
+	}
+	autos, _ := automations[user]
+	c.JSON(http.StatusOK, autos)
+	automationsMutex.RUnlock()
+}
+
+func putUserAutomations(c *gin.Context) {
+	automationsMutex.Lock()
+	// Do update
+	c.String(http.StatusOK, "automation PUT request successful")
+	db.Write(automationcol, automationcol, automations)
+	automationsMutex.Unlock()
+}
+
+func getConfig(c *gin.Context) {
+	cfgMutex.RLock()
+	c.JSON(http.StatusOK, cfg)
+	cfgMutex.RUnlock()
+}
+
+func putConfig(c *gin.Context) {
+	cfgMutex.Lock()
+	temp := config{}
+	fmt.Println("temp", temp)
+	err := c.Bind(&temp)
+	if err != nil {
+		log.Println(err)
+		c.String(http.StatusBadRequest, "Invalid JSON received")
+	}
+	fmt.Println("temp", temp)
+	cfg = temp
+	c.String(http.StatusOK, "config PUT request successful")
+	fmt.Println("cfg", temp)
+	db.Write(configcol, configcol, cfg)
+	cfgMutex.Unlock()
+}
+
+func addUser(c *gin.Context) {
+	userMapMutex.Lock()
+	user := c.DefaultQuery("user", "")
+	instanceid := c.DefaultQuery("fbid", "")
+	if user == "" || instanceid == "" {
+		c.String(http.StatusBadRequest, "Invalid user or instanceid")
+		return
+	}
+	c.String(http.StatusOK, "Nice job!")
+	userMap[user] = instanceid
+	err := db.Write(usercol, usercol, userMap)
+	if err != nil {
+		fmt.Println(err)
+	}
+	userMapMutex.Unlock()
+}
+
+

@@ -222,6 +222,13 @@ cp svm-train /usr/local/bin/`)
 	r.PUT("/database", migrateDatabase)
 	r.GET("/lastfingerprint", apiGetLastFingerprint)
 
+	// clquebec endpoints
+	r.GET("/automations", getUserAutomations)
+	r.PUT("/automations", putUserAutomations)
+	r.GET("/config", getConfig)
+	r.PUT("/config", putConfig)
+	r.GET("/adduser", addUser)
+
 	// Load and display the logo
 	dat, _ := ioutil.ReadFile("./static/logo.txt")
 	fmt.Println(string(dat))
