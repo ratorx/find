@@ -26,20 +26,6 @@ type automation struct {
 	Actions   []action
 }
 
-type people struct {
-	Name  string `json:"name"`
-	Email string `json:"email"`
-	Uid   string `json:"uid"`
-}
-
-type configData struct {
-	Server  string      `json:"server"`
-	Me      string      `json:"me"`
-	Devices interface{} `json:"devices"`
-	Rooms   interface{} `json:"rooms"`
-	People  []people    `json:"people"`
-}
-
 type config struct {
 	Data interface{} `json:"data"`
 }
