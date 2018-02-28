@@ -12,6 +12,7 @@ LDFLAGS=-ldflags "-X main.VersionNum=${VERSION} -X main.Build=${BUILD} -X main.B
 .DEFAULT_GOAL: $(BINARY)
 
 $(BINARY): $(SOURCES)
+	go get -d
 	go build ${LDFLAGS} -o ${BINARY}
 
 .PHONY: install

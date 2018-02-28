@@ -16,6 +16,8 @@ const (
 	usercol       = "users"
 	configcol     = "config"
 	automationcol = "automations"
+	jsonDir       = "json"
+	oauthFile     = "oauth.json"
 )
 
 type action struct {
@@ -49,9 +51,11 @@ var automationsMutex sync.RWMutex
 var cfg config
 var cfgMutex sync.RWMutex
 
+var firebaseClient *messaging.Client
+
 func init() {
 	var err error
-	db, err = scribble.New("json", nil)
+	db, err = scribble.New(jsonDir, nil)
 	if err != nil {
 		panic(err)
 	}
@@ -84,6 +88,17 @@ func init() {
 			fmt.Println(err)
 			panic(er)
 		}
+	}
+
+	opt := option.WithCredentialsFile(oauthFile)
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		panic(err)
+	}
+
+	firebaseClient, err = app.Messaging(context.Background())
+	if err != nil {
+		panic(err)
 	}
 }
 
@@ -135,21 +150,13 @@ func verifyLocations(auto *automation, loc map[string]string) bool { // Assumes 
 }
 
 func triggerAction(name string, auto automation) {
-	fmt.Println("Running")
-	a := []action{action{"00000000-0000-0000-0000-000000000001", "enable", []string{}, []string{}}}
-
-	opt := option.WithCredentialsFile("priv.json")
-	app, err := firebase.NewApp(context.Background(), nil, opt)
-	if err != nil {
-		fmt.Printf("error initializing app: %v", err)
+	token, ok := userMap[name]
+	if !ok {
+		return
 	}
 
-	cl, err := app.Messaging(context.Background())
-	if err != nil {
-		fmt.Printf("error initialising message: %v", err)
-	}
 
-	b, err := json.Marshal(a)
+	b, err := json.Marshal(auto)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -157,12 +164,12 @@ func triggerAction(name string, auto automation) {
 
 	m := &messaging.Message{
 		Data: map[string]string{
-			"actions":              string(b),
+			"actions": string(b),
 		},
-		Token: "ctwa1LnKH54:APA91bFjc6ciRG9f53bYm0_pkNo5gJbEoYfIM0vBGY28DxzmG4jdwKUBejKKKl636Vi0lE1aHTpBsumcAmm0BknM-XiDOAgMXfMlMzFVfUF0gGqJFcBfE7-l6JpMbvg042D51BHDPo7f",
+		Token: token,
 	}
 
-	res, err := cl.Send(context.Background(), m)
+	res, err := firebaseClient.Send(context.Background(), m)
 	if err != nil {
 		fmt.Println(err)
 	}
