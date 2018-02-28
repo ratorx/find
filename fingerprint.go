@@ -184,12 +184,13 @@ func learnFingerprint(jsonFingerprint Fingerprint) (string, bool) {
 	}
 	putFingerprintIntoDatabase(jsonFingerprint, "fingerprints")
 	go setLearningCache(strings.ToLower(jsonFingerprint.Group), true)
+	go updateUserloc(jsonFingerprint.Username, jsonFingerprint.Location)
 	message := "Inserted fingerprint containing " + strconv.Itoa(len(jsonFingerprint.WifiFingerprint)) + " APs for " + jsonFingerprint.Username + " (" + jsonFingerprint.Group + ") at " + jsonFingerprint.Location
 	return message, true
 }
 
 func trackFingerprint(jsonFingerprint Fingerprint) (string, bool, string, map[string]float64, map[string]float64, map[string]float64) {
-	// Classify with filter fingerprint
+	// Classify with filter fingerprint	go updateUserloc(jsonFingerprint.Username, jsonFingerprint.Location)
 	fullFingerprint := jsonFingerprint
 	filterFingerprint(&jsonFingerprint)
 
@@ -279,6 +280,7 @@ func trackFingerprint(jsonFingerprint Fingerprint) (string, bool, string, map[st
 		userJSON.Rf = rfClassify(strings.ToLower(jsonFingerprint.Group), jsonFingerprint)
 	}
 	go setUserPositionCache(strings.ToLower(jsonFingerprint.Group)+strings.ToLower(jsonFingerprint.Username), userJSON)
+	go updateUserloc(jsonFingerprint.Username, locationGuess1)
 
 	return message, true, locationGuess1, bayes, svmData, userJSON.Rf
 
