@@ -19,7 +19,6 @@ import (
 
 	"github.com/gin-gonic/contrib/sessions"
 	"github.com/gin-gonic/gin"
-	"log"
 )
 
 // slash returns the dashboard, if logged in, else it redirects to login page.
@@ -318,8 +317,14 @@ func getUserAutomations(c *gin.Context) {
 }
 
 func putUserAutomations(c *gin.Context) {
+	temp := map[string][]automation{}
+	err := c.BindJSON(&temp)
+	if err != nil {
+		fmt.Println(err)
+		c.String(http.StatusBadRequest, "Invalid JSON received")
+	}
 	automationsMutex.Lock()
-	// Do update
+	automations = temp
 	c.String(http.StatusOK, "automation PUT request successful")
 	db.Write(automationcol, automationcol, automations)
 	automationsMutex.Unlock()
@@ -332,18 +337,16 @@ func getConfig(c *gin.Context) {
 }
 
 func putConfig(c *gin.Context) {
-	cfgMutex.Lock()
 	temp := config{}
-	fmt.Println("temp", temp)
-	err := c.Bind(&temp)
+	err := c.BindJSON(&temp)
 	if err != nil {
-		log.Println(err)
+		fmt.Println(err)
 		c.String(http.StatusBadRequest, "Invalid JSON received")
+		return
 	}
-	fmt.Println("temp", temp)
+	cfgMutex.Lock()
 	cfg = temp
 	c.String(http.StatusOK, "config PUT request successful")
-	fmt.Println("cfg", temp)
 	db.Write(configcol, configcol, cfg)
 	cfgMutex.Unlock()
 }

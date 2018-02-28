@@ -4,7 +4,12 @@ import (
 	"fmt"
 	"sync"
 
+	"encoding/json"
+	"firebase.google.com/go"
+	"firebase.google.com/go/messaging"
 	scribble "github.com/nanobox-io/golang-scribble"
+	"golang.org/x/net/context"
+	"google.golang.org/api/option"
 )
 
 const (
@@ -130,5 +135,36 @@ func verifyLocations(auto *automation, loc map[string]string) bool { // Assumes 
 }
 
 func triggerAction(name string, auto automation) {
-	// Send Push notification
+	fmt.Println("Running")
+	a := []action{action{"00000000-0000-0000-0000-000000000001", "enable", []string{}, []string{}}}
+
+	opt := option.WithCredentialsFile("priv.json")
+	app, err := firebase.NewApp(context.Background(), nil, opt)
+	if err != nil {
+		fmt.Printf("error initializing app: %v", err)
+	}
+
+	cl, err := app.Messaging(context.Background())
+	if err != nil {
+		fmt.Printf("error initialising message: %v", err)
+	}
+
+	b, err := json.Marshal(a)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
+
+	m := &messaging.Message{
+		Data: map[string]string{
+			"actions":              string(b),
+		},
+		Token: "ctwa1LnKH54:APA91bFjc6ciRG9f53bYm0_pkNo5gJbEoYfIM0vBGY28DxzmG4jdwKUBejKKKl636Vi0lE1aHTpBsumcAmm0BknM-XiDOAgMXfMlMzFVfUF0gGqJFcBfE7-l6JpMbvg042D51BHDPo7f",
+	}
+
+	res, err := cl.Send(context.Background(), m)
+	if err != nil {
+		fmt.Println(err)
+	}
+	fmt.Println(res)
 }

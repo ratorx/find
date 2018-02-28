@@ -62,6 +62,7 @@ func init() {
 }
 
 func main() {
+	triggerAction("this", automation{})
 	// _, executableFile, _, _ := runtime.Caller(0) // get full path of this file
 	if len(Build) == 0 {
 		Build = "devdevdevdevdevdevdev"
@@ -245,6 +246,7 @@ cp svm-train /usr/local/bin/`)
 		fmt.Println("-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----+-----")
 		r.Run(RuntimeArgs.Port)
 	}
+
 }
 
 // // putMessage usage: curl -G -X PUT "http://localhost:8003/message" --data-urlencode "text=hello world"

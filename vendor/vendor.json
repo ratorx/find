@@ -1,0 +1,25 @@
+{
+	"comment": "",
+	"ignore": "",
+	"package": [
+		{
+			"checksumSHA1": "37HJzhdVhezeIdE5RnFROr+nNtA=",
+			"path": "github.com/gin-contrib/cors",
+			"revision": "df6cfb7ff4a38d694dfebd0868ecb3e956171366",
+			"revisionTime": "2018-02-25T15:46:31Z"
+		},
+		{
+			"checksumSHA1": "689J/Siuh3+17pOY2qj3lMXhSv8=",
+			"path": "github.com/jcelliott/lumber",
+			"revision": "dd349441af25132d146d7095c6693a15431fc9b1",
+			"revisionTime": "2016-03-24T20:37:08Z"
+		},
+		{
+			"checksumSHA1": "oXjI2WLEYnaCG/90sKk02Nob2cQ=",
+			"path": "github.com/nanobox-io/golang-scribble",
+			"revision": "ced58d671850da57ce8c11315424513b608083d7",
+			"revisionTime": "2017-10-26T14:29:21Z"
+		}
+	],
+	"rootPath": "github.com/ratorx/find"
+}
