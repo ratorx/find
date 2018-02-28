@@ -90,6 +90,9 @@ func init() {
 		}
 	}
 
+	// Initialise userLoc
+	userLoc = make(map[string]string)
+
 	opt := option.WithCredentialsFile(oauthFile)
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
@@ -103,11 +106,9 @@ func init() {
 }
 
 func updateUserloc(name string, loc string) {
-	userMapMutex.RLock()
 	if _, ok := userMap[name]; !ok {
 		return // Silently return for non-existent users
 	}
-	userMapMutex.RUnlock()
 
 	changed := false
 	userLocMutex.Lock()
@@ -150,10 +151,12 @@ func verifyLocations(auto *automation, loc map[string]string) bool { // Assumes 
 }
 
 func triggerAction(name string, auto automation) {
+	userMapMutex.RLock()
 	token, ok := userMap[name]
 	if !ok {
 		return
 	}
+	userMapMutex.RUnlock()
 
 
 	b, err := json.Marshal(auto)
