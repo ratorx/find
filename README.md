@@ -1,6 +1,6 @@
 # ![](https://raw.githubusercontent.com/schollz/find/master/static/img/FIND_icon_larger.png) FIND
 
-[![Build Status](https://travis-ci.org/schollz/find.svg?branch=master)](https://travis-ci.org/schollz/find)
+[![Build Status](https://travis-ci.org/ratorx/find.svg?branch=master)](https://travis-ci.org/ratorx/find)
 [![Version 2.4](https://img.shields.io/badge/version-2.4-brightgreen.svg)](https://www.internalpositioning.com/guide/development/) 
 [![Github All Releases](https://img.shields.io/github/downloads/schollz/find/total.svg)](https://github.com/schollz/find/releases)
 [![FIND documentation](https://img.shields.io/badge/find-documentation-blue.svg)](https://www.internalpositioning.com/) 
