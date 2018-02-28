@@ -28,7 +28,7 @@ type action struct {
 }
 
 type automation struct {
-	Me        string
+	Me        string // Identifier for user who created this - should be an entry in userMap
 	Locations map[string]string
 	Actions   []action
 }
@@ -39,7 +39,7 @@ type config struct {
 
 var db *scribble.Driver
 
-var userMap map[string]string
+var userMap map[string]string // Stores user names to identifiers
 var userMapMutex sync.RWMutex
 
 var userLoc map[string]string
