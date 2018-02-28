@@ -19,6 +19,7 @@ import (
 	"strings"
 
 	"github.com/gin-gonic/contrib/sessions"
+	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"
 )
 
@@ -178,6 +179,9 @@ cp svm-train /usr/local/bin/`)
 	// Create cookie store to keep track of logged in user
 	store := sessions.NewCookieStore([]byte("secret"))
 	r.Use(sessions.Sessions("mysession", store))
+	
+	// Add CORS
+	r.Use(cors.Default())
 
 	// 404-page redirects to login
 	r.NoRoute(func(c *gin.Context) {
