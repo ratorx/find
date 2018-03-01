@@ -319,7 +319,7 @@ func getUserAutomations(c *gin.Context) {
 func putUserAutomations(c *gin.Context) {
 	user := c.DefaultQuery("user", "")
 	if user != "" {
-		temp := []automation{}
+		var temp []automation
 		err := c.BindJSON(&temp)
 		if err != nil {
 			fmt.Println(err)
@@ -335,12 +335,16 @@ func putUserAutomations(c *gin.Context) {
 		if err != nil {
 			fmt.Println(err)
 			c.String(http.StatusBadRequest, "Invalid JSON received")
+			return
 		}
 		automationsMutex.Lock()
 		automations = temp
 		c.String(http.StatusOK, "automation PUT request successful")
 	}
-	db.Write(automationcol, automationcol, automations)
+	err := db.Write(automationcol, automationcol, automations)
+	if err != nil {
+		fmt.Println(err)
+	}
 	automationsMutex.Unlock()
 }
 
