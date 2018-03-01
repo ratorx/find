@@ -30,11 +30,11 @@ type action struct {
 }
 
 type automation struct {
-	Me        string // Identifier for user who created this - should be an entry in userMap
-	Locations map[string]string
-	Actions   []action
+	Me           string // Identifier for user who created this - should be an entry in userMap
+	Locations    map[string]string
+	Actions      []action
 	LeaveActions []action
-	called bool
+	called       bool
 }
 
 type config struct {
@@ -141,7 +141,9 @@ func checkAutomation() {
 	automationsMutex.RLock()
 	for user, autos := range automations { // Iterates over automation lists
 		for _, auto := range autos { // Iterates over automations
-			if ok, enterac := verifyLocations(&auto, userLoc); ok { // Eligible for trigger
+			ok, enterac := verifyLocations(&auto, userLoc)
+			fmt.Println(ok, enterac)
+			if ok { // Eligible for trigger
 				go triggerAction(user, auto, enterac)
 			}
 		}
