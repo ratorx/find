@@ -326,9 +326,9 @@ func putUserAutomations(c *gin.Context) {
 			c.String(http.StatusBadRequest, "Invalid JSON received")
 			return
 		}
+		automationsMutex.Lock()
 		automations[user] = temp
 		c.String(http.StatusOK, "automation PUT request successful")
-		automationsMutex.Lock()
 	} else {
 		temp := map[string][]automation{}
 		err := c.BindJSON(&temp)
