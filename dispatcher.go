@@ -33,6 +33,7 @@ type automation struct {
 	Me        string // Identifier for user who created this - should be an entry in userMap
 	Locations map[string]string
 	Actions   []action
+	LeaveActions []action
 	called bool
 }
 
@@ -139,8 +140,8 @@ func checkAutomation() {
 	automationsMutex.RLock()
 	for user, autos := range automations { // Iterates over automation lists
 		for _, auto := range autos { // Iterates over automations
-			if verifyLocations(&auto, userLoc) { // Eligible for trigger
-				go triggerAction(user, auto)
+			if ok, enterac := verifyLocations(&auto, userLoc); ok { // Eligible for trigger
+				go triggerAction(user, auto, enterac)
 			}
 		}
 	}
@@ -149,24 +150,28 @@ func checkAutomation() {
 	checkMutex.Unlock()
 }
 
-func verifyLocations(auto *automation, loc map[string]string) bool { // Assumes a read lock is held by calling function
+func verifyLocations(auto *automation, loc map[string]string) (bool, bool) { // Assumes a read lock is held by calling function
+	// 1st bool is trigger indicator, 2nd bool is enter (true) or leave  (false) actions
 	for person, l := range auto.Locations { // Validates other location conditions
 		checkLoc, ok2 := loc[person]
 		if !ok2 || checkLoc != l {
-			auto.called = false
-			return false
+			if auto.called {
+				auto.called = false
+				return true, false
+			}
+			return false, false
 		}
 	}
 
-	if auto.called == true {
-		return false
+	if !auto.called {
+		auto.called = true
+		return true, true
 	}
 
-	auto.called = true
-	return true
+	return false, true
 }
 
-func triggerAction(name string, auto automation) {
+func triggerAction(name string, auto automation, enterac bool) {
 	userMapMutex.RLock()
 	token, ok := userMap[name]
 	if !ok {
@@ -174,7 +179,13 @@ func triggerAction(name string, auto automation) {
 	}
 	userMapMutex.RUnlock()
 
-	b, err := json.Marshal(auto)
+	var b []byte
+	var err error
+	if enterac {
+		b, err = json.Marshal(auto.Actions)
+	} else {
+		b, err = json.Marshal(auto.LeaveActions)
+	}
 	if err != nil {
 		fmt.Println(err)
 		return
