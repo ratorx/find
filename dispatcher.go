@@ -9,7 +9,9 @@ import (
 	"firebase.google.com/go/messaging"
 	scribble "github.com/nanobox-io/golang-scribble"
 	"golang.org/x/net/context"
+	"golang.org/x/time/rate"
 	"google.golang.org/api/option"
+	"time"
 )
 
 const (
@@ -31,6 +33,7 @@ type automation struct {
 	Me        string // Identifier for user who created this - should be an entry in userMap
 	Locations map[string]string
 	Actions   []action
+	called bool
 }
 
 type config struct {
@@ -43,7 +46,7 @@ var userMap map[string]string // Stores user names to identifiers
 var userMapMutex sync.RWMutex
 
 var userLoc map[string]string
-var userLocMutex sync.RWMutex
+var userLocMutex sync.Mutex
 
 var automations map[string][]automation
 var automationsMutex sync.RWMutex
@@ -52,6 +55,9 @@ var cfg config
 var cfgMutex sync.RWMutex
 
 var firebaseClient *messaging.Client
+
+var limiter *rate.Limiter
+var checkMutex sync.Mutex
 
 func init() {
 	var err error
@@ -103,6 +109,8 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
+
+	limiter = rate.NewLimiter(rate.Every(500*time.Millisecond), 1)
 }
 
 func updateUserloc(name string, loc string) {
@@ -119,34 +127,42 @@ func updateUserloc(name string, loc string) {
 	}
 	userLocMutex.Unlock()
 
-	if changed {
-		checkAutomation(name)
+	if changed && limiter.Allow() {
+		go checkAutomation()
 	}
 }
 
-func checkAutomation(name string) {
+func checkAutomation() {
+	checkMutex.Lock()
 	// Check the automations for matched conditions and trigger if required
-	userLocMutex.RLock()
+	userLocMutex.Lock()
 	automationsMutex.RLock()
 	for user, autos := range automations { // Iterates over automation lists
 		for _, auto := range autos { // Iterates over automations
-			if _, ok := auto.Locations[name]; ok && verifyLocations(&auto, userLoc) { // Eligible for trigger
+			if verifyLocations(&auto, userLoc) { // Eligible for trigger
 				go triggerAction(user, auto)
 			}
 		}
 	}
 	automationsMutex.RUnlock()
-	userLocMutex.RUnlock()
+	userLocMutex.Unlock()
+	checkMutex.Unlock()
 }
 
 func verifyLocations(auto *automation, loc map[string]string) bool { // Assumes a read lock is held by calling function
 	for person, l := range auto.Locations { // Validates other location conditions
 		checkLoc, ok2 := loc[person]
 		if !ok2 || checkLoc != l {
+			auto.called = false
 			return false
 		}
 	}
 
+	if auto.called == true {
+		return false
+	}
+
+	auto.called = true
 	return true
 }
 
@@ -157,7 +173,6 @@ func triggerAction(name string, auto automation) {
 		return
 	}
 	userMapMutex.RUnlock()
-
 
 	b, err := json.Marshal(auto)
 	if err != nil {
