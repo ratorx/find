@@ -134,6 +134,7 @@ func updateUserloc(name string, loc string) {
 }
 
 func checkAutomation() {
+	fmt.Println("Checking automations")
 	checkMutex.Lock()
 	// Check the automations for matched conditions and trigger if required
 	userLocMutex.Lock()
@@ -151,6 +152,7 @@ func checkAutomation() {
 }
 
 func verifyLocations(auto *automation, loc map[string]string) (bool, bool) { // Assumes a read lock is held by calling function
+	fmt.Println("Verifying Locations")
 	// 1st bool is trigger indicator, 2nd bool is enter (true) or leave  (false) actions
 	for person, l := range auto.Locations { // Validates other location conditions
 		checkLoc, ok2 := loc[person]
@@ -172,6 +174,8 @@ func verifyLocations(auto *automation, loc map[string]string) (bool, bool) { // 
 }
 
 func triggerAction(name string, auto automation, enterac bool) {
+	fmt.Println("Action triggered")
+
 	userMapMutex.RLock()
 	token, ok := userMap[name]
 	if !ok {
@@ -181,10 +185,13 @@ func triggerAction(name string, auto automation, enterac bool) {
 
 	var b []byte
 	var err error
-	if enterac {
+	if enterac && len(auto.Actions) != 0 {
 		b, err = json.Marshal(auto.Actions)
-	} else {
+	} else if !enterac && len(auto.Actions) != 0 {
 		b, err = json.Marshal(auto.LeaveActions)
+	} else {
+		fmt.Println("No actions specified")
+		return
 	}
 	if err != nil {
 		fmt.Println(err)
