@@ -141,7 +141,9 @@ func checkAutomation() {
 	automationsMutex.RLock()
 	for user, autos := range automations { // Iterates over automation lists
 		for _, auto := range autos { // Iterates over automations
+			fmt.Println(auto)
 			ok, enterac := verifyLocations(&auto, userLoc)
+			fmt.Println(auto)
 			fmt.Println(ok, enterac)
 			if ok { // Eligible for trigger
 				go triggerAction(user, auto, enterac)
