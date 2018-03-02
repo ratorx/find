@@ -317,6 +317,7 @@ func getUserAutomations(c *gin.Context) {
 }
 
 func putUserAutomations(c *gin.Context) {
+	fmt.Println("PUT automation request received")
 	user := c.DefaultQuery("user", "")
 	if user != "" {
 		var temp []automation
