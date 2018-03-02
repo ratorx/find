@@ -9,7 +9,6 @@ import (
 	"firebase.google.com/go/messaging"
 	scribble "github.com/nanobox-io/golang-scribble"
 	"golang.org/x/net/context"
-	"golang.org/x/time/rate"
 	"google.golang.org/api/option"
 	"time"
 )
