@@ -15,11 +15,14 @@ import (
 )
 
 const (
+	groupName     = "lullinglabradoodle"
 	usercol       = "users"
 	configcol     = "config"
 	automationcol = "automations"
 	jsonDir       = "json"
 	oauthFile     = "oauth.json"
+	buffer        = 10
+	checkDelay    = 100
 )
 
 type action struct {
@@ -46,9 +49,6 @@ var db *scribble.Driver
 var userMap map[string]string // Stores user names to identifiers
 var userMapMutex sync.RWMutex
 
-var userLoc map[string]string
-var userLocMutex sync.Mutex
-
 var automations map[string][]automation
 var automationsMutex sync.RWMutex
 
@@ -57,8 +57,7 @@ var cfgMutex sync.RWMutex
 
 var firebaseClient *messaging.Client
 
-var limiter *rate.Limiter
-var checkMutex sync.Mutex
+var checkAuto chan struct{}
 
 func init() {
 	var err error
@@ -97,9 +96,6 @@ func init() {
 		}
 	}
 
-	// Initialise userLoc
-	userLoc = make(map[string]string)
-
 	opt := option.WithCredentialsFile(oauthFile)
 	app, err := firebase.NewApp(context.Background(), nil, opt)
 	if err != nil {
@@ -111,54 +107,35 @@ func init() {
 		panic(err)
 	}
 
-	limiter = rate.NewLimiter(rate.Every(500*time.Millisecond), 1)
-}
+	checkAuto = make(chan struct{}, buffer)
 
-func updateUserloc(name string, loc string) {
-	if _, ok := userMap[name]; !ok {
-		return // Silently return for non-existent users
-	}
-
-	changed := false
-	userLocMutex.Lock()
-	current, ok := userLoc[name]
-	if !ok || current != loc {
-		changed = true
-		userLoc[name] = loc
-	}
-	userLocMutex.Unlock()
-
-	if changed && limiter.Allow() {
-		go checkAutomation()
-	}
+	go checkAutomation()
 }
 
 func checkAutomation() {
-	fmt.Println("Checking automations")
-	checkMutex.Lock()
-	// Check the automations for matched conditions and trigger if required
-	userLocMutex.Lock()
-	automationsMutex.RLock()
-	for user, _ := range automations { // Iterates over automation lists
-		for i, _ := range automations[user] { // Iterates over automations
-			ok, enterac := verifyLocations(&automations[user][i], userLoc)
-			fmt.Println(ok, enterac)
-			if ok { // Eligible for trigger
-				go triggerAction(user, automations[user][i], enterac)
+	for {
+		<-checkAuto
+		currentLocations := getCurrentPositionOfAllUsers(groupName)
+		for user := range automations { // Iterates over automation lists
+			for i := range automations[user] { // Iterates over automations
+				ok, enterac := verifyLocations(&automations[user][i], currentLocations)
+				if ok { // Eligible for trigger
+					if enterac {
+						go triggerAction(user, automations[user][i].Actions)
+					} else {
+						go triggerAction(user, automations[user][i].LeaveActions)
+					}
+				}
 			}
 		}
+		time.Sleep(checkDelay * time.Millisecond)
 	}
-	automationsMutex.RUnlock()
-	userLocMutex.Unlock()
-	checkMutex.Unlock()
 }
 
-func verifyLocations(auto *automation, loc map[string]string) (bool, bool) { // Assumes a read lock is held by calling function
-	fmt.Println("Verifying Locations")
-	// 1st bool is trigger indicator, 2nd bool is enter (true) or leave  (false) actions
+func verifyLocations(auto *automation, loc map[string]UserPositionJSON) (bool, bool) { // Assumes a read lock is held by calling function
 	for person, l := range auto.Locations { // Validates other location conditions
 		checkLoc, ok2 := loc[person]
-		if !ok2 || checkLoc != l {
+		if !ok2 || l != checkLoc.Location.(string) {
 			if auto.called {
 				auto.called = false
 				return true, false
@@ -175,9 +152,7 @@ func verifyLocations(auto *automation, loc map[string]string) (bool, bool) { // 
 	return false, true
 }
 
-func triggerAction(name string, auto automation, enterac bool) {
-	fmt.Println("Action triggered")
-
+func triggerAction(name string, actions []action) {
 	userMapMutex.RLock()
 	token, ok := userMap[name]
 	if !ok {
@@ -185,16 +160,12 @@ func triggerAction(name string, auto automation, enterac bool) {
 	}
 	userMapMutex.RUnlock()
 
-	var b []byte
-	var err error
-	if enterac && len(auto.Actions) != 0 {
-		b, err = json.Marshal(auto.Actions)
-	} else if !enterac && len(auto.Actions) != 0 {
-		b, err = json.Marshal(auto.LeaveActions)
-	} else {
-		fmt.Println("No actions specified")
+	if len(actions) == 0 {
+		fmt.Println("No actions specified - skip sending push notification")
 		return
 	}
+
+	b, err := json.Marshal(actions)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -207,9 +178,10 @@ func triggerAction(name string, auto automation, enterac bool) {
 		Token: token,
 	}
 
-	res, err := firebaseClient.Send(context.Background(), m)
+	_, err = firebaseClient.Send(context.Background(), m)
 	if err != nil {
 		fmt.Println(err)
 	}
-	fmt.Println(res)
+	fmt.Println("Automation message send success")
+	fmt.Println(string(b))
 }
