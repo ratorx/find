@@ -31,6 +31,10 @@ type action struct {
 	Arguments  []string `json:"arguments"`  // Actual data
 }
 
+func (a action) String() string {
+	return fmt.Sprintf("Call %s on device %s with arguments %v", a.Method, a.Device, a.Arguments)
+}
+
 type automation struct {
 	Me           string // Identifier for user who created this - should be an entry in userMap
 	Locations    map[string]string
@@ -115,18 +119,18 @@ func checkAutomation() {
 	for {
 		<-checkAuto
 		currentLocations := getCurrentPositionOfAllUsers(groupName)
+		automationsMutex.RLock()
 		for user := range automations { // Iterates over automation lists
 			for i := range automations[user] { // Iterates over automations
 				ok, enterac := verifyLocations(&automations[user][i], currentLocations)
-				if ok { // Eligible for trigger
-					if enterac {
-						go triggerAction(user, automations[user][i].Actions)
-					} else {
-						go triggerAction(user, automations[user][i].LeaveActions)
-					}
+				if ok && enterac {
+					go triggerAction(user, automations[user][i].Actions)
+				} else if ok && !enterac {
+					go triggerAction(user, automations[user][i].LeaveActions)
 				}
 			}
 		}
+		automationsMutex.RUnlock()
 		time.Sleep(checkDelay * time.Millisecond)
 	}
 }
