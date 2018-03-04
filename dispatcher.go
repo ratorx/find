@@ -124,7 +124,7 @@ func checkAutomation() {
 				fmt.Println(ok, enterac)
 				if ok && enterac {
 					go triggerAction(user, automations[user][i].Actions)
-				} else if ok && !enterac {\
+				} else if ok && !enterac {
 					go triggerAction(user, automations[user][i].LeaveActions)
 				}
 			}
