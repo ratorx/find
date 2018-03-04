@@ -306,6 +306,7 @@ func slashPie(c *gin.Context) {
 
 func getUserAutomations(c *gin.Context) {
 	automationsMutex.RLock()
+	defer automationsMutex.RUnlock()
 	user := c.DefaultQuery("user", "")
 	if user == "" {
 		c.JSON(http.StatusOK, automations)
@@ -313,7 +314,6 @@ func getUserAutomations(c *gin.Context) {
 	}
 	autos, _ := automations[user]
 	c.JSON(http.StatusOK, autos)
-	automationsMutex.RUnlock()
 }
 
 func putUserAutomations(c *gin.Context) {
@@ -328,8 +328,8 @@ func putUserAutomations(c *gin.Context) {
 			return
 		}
 		automationsMutex.Lock()
-		automations[user] = temp
 		defer automationsMutex.Unlock()
+		automations[user] = temp
 		c.String(http.StatusOK, "automation PUT request successful")
 	} else {
 		temp := map[string][]automation{}
@@ -340,8 +340,8 @@ func putUserAutomations(c *gin.Context) {
 			return
 		}
 		automationsMutex.Lock()
-		automations = temp
 		defer automationsMutex.Unlock()
+		automations = temp
 		c.String(http.StatusOK, "automation PUT request successful")
 	}
 	err := db.Write(automationcol, automationcol, automations)

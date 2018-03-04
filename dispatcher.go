@@ -20,7 +20,7 @@ const (
 	automationcol = "automations"
 	jsonDir       = "json"
 	oauthFile     = "oauth.json"
-	buffer        = 10
+	buffer        = 1
 	checkDelay    = 100
 )
 
@@ -118,6 +118,7 @@ func checkAutomation() {
 		<-checkAuto
 		currentLocations := getCurrentPositionOfAllUsers(groupName)
 		automationsMutex.RLock()
+		fmt.Println("Mutex acquired - checking automation")
 		for user := range automations { // Iterates over automation lists
 			for i := range automations[user] { // Iterates over automations
 				ok, enterac := verifyLocations(&automations[user][i], currentLocations)
@@ -130,6 +131,7 @@ func checkAutomation() {
 			}
 		}
 		automationsMutex.RUnlock()
+		fmt.Println("Mutex unlocked")
 		time.Sleep(checkDelay * time.Millisecond)
 	}
 }
