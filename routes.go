@@ -306,6 +306,7 @@ func slashPie(c *gin.Context) {
 
 func getUserAutomations(c *gin.Context) {
 	automationsMutex.RLock()
+	defer automationsMutex.RUnlock()
 	user := c.DefaultQuery("user", "")
 	if user == "" {
 		c.JSON(http.StatusOK, automations)
@@ -313,7 +314,6 @@ func getUserAutomations(c *gin.Context) {
 	}
 	autos, _ := automations[user]
 	c.JSON(http.StatusOK, autos)
-	automationsMutex.RUnlock()
 }
 
 func putUserAutomations(c *gin.Context) {
@@ -327,6 +327,7 @@ func putUserAutomations(c *gin.Context) {
 			return
 		}
 		automationsMutex.Lock()
+		defer automationsMutex.Unlock()
 		automations[user] = temp
 		c.String(http.StatusOK, "automation PUT request successful")
 	} else {
@@ -338,6 +339,7 @@ func putUserAutomations(c *gin.Context) {
 			return
 		}
 		automationsMutex.Lock()
+		defer automationsMutex.Unlock()
 		automations = temp
 		c.String(http.StatusOK, "automation PUT request successful")
 	}
@@ -345,13 +347,12 @@ func putUserAutomations(c *gin.Context) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	automationsMutex.Unlock()
 }
 
 func getConfig(c *gin.Context) {
 	cfgMutex.RLock()
+	defer cfgMutex.RUnlock()
 	c.JSON(http.StatusOK, cfg)
-	cfgMutex.RUnlock()
 }
 
 func putConfig(c *gin.Context) {
@@ -363,14 +364,15 @@ func putConfig(c *gin.Context) {
 		return
 	}
 	cfgMutex.Lock()
+	defer cfgMutex.Unlock()
 	cfg = temp
 	c.String(http.StatusOK, "config PUT request successful")
 	db.Write(configcol, configcol, cfg)
-	cfgMutex.Unlock()
 }
 
 func addUser(c *gin.Context) {
 	userMapMutex.Lock()
+	defer userMapMutex.Unlock()
 	user := c.DefaultQuery("user", "")
 	instanceid := c.DefaultQuery("fbid", "")
 	if user == "" || instanceid == "" {
@@ -383,7 +385,6 @@ func addUser(c *gin.Context) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	userMapMutex.Unlock()
 }
 
 
