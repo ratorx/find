@@ -47,5 +47,5 @@ func TestTriggerEntryAction(t *testing.T) {
 	const fbid = "ENTER CLIENTID HERE"
 	userMap = make(map[string]string)
 	userMap[user] = fbid
-	triggerAction(user, automations[user][0], true)
+	triggerAction(user, automations[user][0].Actions)
 }

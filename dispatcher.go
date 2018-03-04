@@ -9,7 +9,6 @@ import (
 	"firebase.google.com/go/messaging"
 	scribble "github.com/nanobox-io/golang-scribble"
 	"golang.org/x/net/context"
-	"golang.org/x/time/rate"
 	"google.golang.org/api/option"
 	"time"
 )
@@ -20,6 +19,8 @@ const (
 	automationcol = "automations"
 	jsonDir       = "json"
 	oauthFile     = "oauth.json"
+	buffer = 1
+	checkDelay = 100
 )
 
 type action struct {
@@ -27,6 +28,10 @@ type action struct {
 	Method     string   `json:"method"`
 	Parameters []string `json:"parameters"` // Types of arguments
 	Arguments  []string `json:"arguments"`  // Actual data
+}
+
+func (a action) String() string {
+	return fmt.Sprintf("Call %s on device %s with arguments %v", a.Method, a.Device, a.Arguments)
 }
 
 type automation struct {
@@ -57,8 +62,7 @@ var cfgMutex sync.RWMutex
 
 var firebaseClient *messaging.Client
 
-var limiter *rate.Limiter
-var checkMutex sync.Mutex
+var checkAuto chan struct{}
 
 func init() {
 	var err error
@@ -111,7 +115,7 @@ func init() {
 		panic(err)
 	}
 
-	limiter = rate.NewLimiter(rate.Every(500*time.Millisecond), 1)
+	checkAuto = make(chan struct{}, buffer)
 }
 
 func updateUserloc(name string, loc string) {
@@ -128,30 +132,38 @@ func updateUserloc(name string, loc string) {
 	}
 	userLocMutex.Unlock()
 
-	if changed && limiter.Allow() {
-		go checkAutomation()
+	if changed {
+		select {
+			case checkAuto <- struct{}{}:
+				fmt.Println("Check automation requested")
+		}
 	}
 }
 
 func checkAutomation() {
-	fmt.Println("Checking automations")
-	checkMutex.Lock()
-	// Check the automations for matched conditions and trigger if required
-	userLocMutex.Lock()
-	automationsMutex.RLock()
-	for user, _ := range automations { // Iterates over automation lists
-		for i, _ := range automations[user] { // Iterates over automations
-			ok, enterac := verifyLocations(&automations[user][i], userLoc)
-			fmt.Println(ok, enterac)
-			if ok { // Eligible for trigger
-				go triggerAction(user, automations[user][i], enterac)
+	for {
+		<-checkAuto
+		automationsMutex.RLock()
+		userLocMutex.Lock()
+		fmt.Println("Mutex acquired - checking automation")
+		for user := range automations { // Iterates over automation lists
+			for i := range automations[user] { // Iterates over automations
+				ok, enterac := verifyLocations(&automations[user][i], userLoc)
+				fmt.Println(ok, enterac, userLoc)
+				if ok && enterac {
+					go triggerAction(user, automations[user][i].Actions)
+				} else if ok && !enterac {
+					go triggerAction(user, automations[user][i].LeaveActions)
+				}
 			}
 		}
+		userLocMutex.Lock()
+		automationsMutex.RUnlock()
+		fmt.Println("Mutex unlocked")
+		time.Sleep(checkDelay * time.Millisecond)
 	}
-	automationsMutex.RUnlock()
-	userLocMutex.Unlock()
-	checkMutex.Unlock()
 }
+
 
 func verifyLocations(auto *automation, loc map[string]string) (bool, bool) { // Assumes a read lock is held by calling function
 	fmt.Println("Verifying Locations")
@@ -175,9 +187,7 @@ func verifyLocations(auto *automation, loc map[string]string) (bool, bool) { // 
 	return false, true
 }
 
-func triggerAction(name string, auto automation, enterac bool) {
-	fmt.Println("Action triggered")
-
+func triggerAction(name string, actions []action) {
 	userMapMutex.RLock()
 	token, ok := userMap[name]
 	if !ok {
@@ -185,16 +195,12 @@ func triggerAction(name string, auto automation, enterac bool) {
 	}
 	userMapMutex.RUnlock()
 
-	var b []byte
-	var err error
-	if enterac && len(auto.Actions) != 0 {
-		b, err = json.Marshal(auto.Actions)
-	} else if !enterac && len(auto.Actions) != 0 {
-		b, err = json.Marshal(auto.LeaveActions)
-	} else {
-		fmt.Println("No actions specified")
+	if len(actions) == 0 {
+		fmt.Println("No actions specified - skip sending push notification")
 		return
 	}
+
+	b, err := json.Marshal(actions)
 	if err != nil {
 		fmt.Println(err)
 		return
@@ -207,9 +213,11 @@ func triggerAction(name string, auto automation, enterac bool) {
 		Token: token,
 	}
 
-	res, err := firebaseClient.Send(context.Background(), m)
+	_, err = firebaseClient.Send(context.Background(), m)
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
-	fmt.Println(res)
+	fmt.Println("Automation message send success")
+	fmt.Println(string(b))
 }
