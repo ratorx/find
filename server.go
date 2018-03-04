@@ -250,6 +250,9 @@ cp svm-train /usr/local/bin/`)
 		r.Run(RuntimeArgs.Port)
 	}
 
+	// Start automation checker
+	go checkAutomation()
+
 }
 
 // // putMessage usage: curl -G -X PUT "http://localhost:8003/message" --data-urlencode "text=hello world"

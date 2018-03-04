@@ -111,8 +111,6 @@ func init() {
 	}
 
 	checkAuto = make(chan struct{}, buffer)
-
-	go checkAutomation()
 }
 
 func checkAutomation() {
@@ -123,9 +121,10 @@ func checkAutomation() {
 		for user := range automations { // Iterates over automation lists
 			for i := range automations[user] { // Iterates over automations
 				ok, enterac := verifyLocations(&automations[user][i], currentLocations)
+				fmt.Println(ok, enterac)
 				if ok && enterac {
 					go triggerAction(user, automations[user][i].Actions)
-				} else if ok && !enterac {
+				} else if ok && !enterac {\
 					go triggerAction(user, automations[user][i].LeaveActions)
 				}
 			}
