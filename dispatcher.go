@@ -122,7 +122,7 @@ func checkAutomation() {
 		for user := range automations { // Iterates over automation lists
 			for i := range automations[user] { // Iterates over automations
 				ok, enterac := verifyLocations(&automations[user][i], currentLocations)
-				fmt.Println(ok, enterac)
+				fmt.Println(ok, enterac, currentLocations)
 				if ok && enterac {
 					go triggerAction(user, automations[user][i].Actions)
 				} else if ok && !enterac {
@@ -139,8 +139,12 @@ func checkAutomation() {
 func verifyLocations(auto *automation, loc map[string]UserPositionJSON) (bool, bool) { // Assumes a read lock is held by calling function
 	for person, l := range auto.Locations { // Validates other location conditions
 		checkLoc, ok2 := loc[person]
-		if !ok2 || l != checkLoc.Location.(string) {
-			if auto.called {
+		if !ok2 || checkLoc.Bayes[person] == 0 { // If record doesn't exist or they return a bullshit location, do nothing
+			return false, false
+		}
+
+		if l != checkLoc.Location.(string) { // Locations don't match - changed
+			if auto.called { // Already triggered changed event
 				auto.called = false
 				return true, false
 			}
@@ -148,12 +152,12 @@ func verifyLocations(auto *automation, loc map[string]UserPositionJSON) (bool, b
 		}
 	}
 
-	if !auto.called {
+	if !auto.called { // Trigger correct location event
 		auto.called = true
 		return true, true
 	}
 
-	return false, true
+	return false, true // Don't trigger correct location event more than once
 }
 
 func triggerAction(name string, actions []action) {
