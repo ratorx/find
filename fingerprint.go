@@ -279,7 +279,7 @@ func trackFingerprint(jsonFingerprint Fingerprint) (string, bool, string, map[st
 		userJSON.Rf = rfClassify(strings.ToLower(jsonFingerprint.Group), jsonFingerprint)
 	}
 	go setUserPositionCache(strings.ToLower(jsonFingerprint.Group)+strings.ToLower(jsonFingerprint.Username), userJSON)
-	updateUserloc(jsonFingerprint.Username, locationGuess1)
+	go updateUserloc(jsonFingerprint.Username, locationGuess1)
 
 	return message, true, locationGuess1, bayes, svmData, userJSON.Rf
 
