@@ -159,7 +159,7 @@ func checkAutomation() {
 				}
 			}
 		}
-		userLocMutex.Lock()
+		userLocMutex.Unlock()
 		automationsMutex.RUnlock()
 		fmt.Println("Mutex unlocked")
 		time.Sleep(checkDelay * time.Millisecond)
