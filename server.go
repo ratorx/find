@@ -237,6 +237,9 @@ cp svm-train /usr/local/bin/`)
 	dat, _ := ioutil.ReadFile("./static/logo.txt")
 	fmt.Println(string(dat))
 
+	// Run automation checker
+	go checkAutomation()
+
 	// Check whether user is providing certificates
 	if RuntimeArgs.Socket != "" {
 		r.RunUnix(RuntimeArgs.Socket)
