@@ -329,6 +329,7 @@ func putUserAutomations(c *gin.Context) {
 		}
 		automationsMutex.Lock()
 		automations[user] = temp
+		defer automationsMutex.Unlock()
 		c.String(http.StatusOK, "automation PUT request successful")
 	} else {
 		temp := map[string][]automation{}
@@ -340,19 +341,19 @@ func putUserAutomations(c *gin.Context) {
 		}
 		automationsMutex.Lock()
 		automations = temp
+		defer automationsMutex.Unlock()
 		c.String(http.StatusOK, "automation PUT request successful")
 	}
 	err := db.Write(automationcol, automationcol, automations)
 	if err != nil {
 		fmt.Println(err)
 	}
-	automationsMutex.Unlock()
 }
 
 func getConfig(c *gin.Context) {
 	cfgMutex.RLock()
+	defer cfgMutex.RUnlock()
 	c.JSON(http.StatusOK, cfg)
-	cfgMutex.RUnlock()
 }
 
 func putConfig(c *gin.Context) {
@@ -364,14 +365,15 @@ func putConfig(c *gin.Context) {
 		return
 	}
 	cfgMutex.Lock()
+	defer cfgMutex.Unlock()
 	cfg = temp
 	c.String(http.StatusOK, "config PUT request successful")
 	db.Write(configcol, configcol, cfg)
-	cfgMutex.Unlock()
 }
 
 func addUser(c *gin.Context) {
 	userMapMutex.Lock()
+	defer userMapMutex.Unlock()
 	user := c.DefaultQuery("user", "")
 	instanceid := c.DefaultQuery("fbid", "")
 	if user == "" || instanceid == "" {
@@ -384,7 +386,6 @@ func addUser(c *gin.Context) {
 	if err != nil {
 		fmt.Println(err)
 	}
-	userMapMutex.Unlock()
 }
 
 
