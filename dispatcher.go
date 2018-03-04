@@ -134,8 +134,10 @@ func updateUserloc(name string, loc string) {
 
 	if changed {
 		select {
-			case checkAuto <- struct{}{}:
-				fmt.Println("Check automation requested")
+		case checkAuto <- struct{}{}:
+			fmt.Println("Check automation requested")
+		default:
+			fmt.Println("Queue full")
 		}
 	}
 }
